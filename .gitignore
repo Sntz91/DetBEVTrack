@@ -1,3 +1,4 @@
 data/input/camera_1/*
 **/visualizations/**
 tmp/**
+yolov5s.pt
