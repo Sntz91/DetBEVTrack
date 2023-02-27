@@ -148,7 +148,7 @@ def create_gif(input_dir, object_detection_dir, position_estimation_dir, output_
     out.release()
     
 def main():
-    root_dir = 'outputs/2023-02-27/12-09-57/visualizations'
+    root_dir = 'outputs/2023-02-27/16-33-15/visualizations'
     assert os.path.exists(root_dir)
     create_gif(
         f'{root_dir}/input/camera5', 

@@ -54,11 +54,8 @@ class Positions:
 
 
 class PositionEstimator:
-    def __init__(self, visualize=False):
-        self.visualize = visualize
-        pass
 
-    def estimate(self, detections, H, scale_factor):
+    def estimate(self, detections, H, inv_H, scale_factor):
         positions = Positions()
         for detection in detections:
             instance_pts = self.iterate_img_and_find_car_pixels(detection.mask)
@@ -67,12 +64,26 @@ class PositionEstimator:
             min_rect_pts = self.get_min_rect_points(instance_pts)
 
             min_rect_pts_image = self.move_ground_contact_points_by_bb_coordinates(min_rect_pts, detection.xywh())
-            ground_contact_points_image = self.find_ground_contact_line(min_rect_pts_image)
+            ground_contact_points_image, shift_flag = self.find_ground_contact_line(min_rect_pts_image)
             ground_contact_points_world = self.transform_ground_contact_points_from_image_to_world(ground_contact_points_image, H)
-            rotated_rvec = self.find_and_rotate_rvec_of_bottom_straight_by_degree(ground_contact_points_world, 90)
-            ground_contact_point_world = self.calc_midpoint_from_two_points(ground_contact_points_world)
-            shifted_ground_contact_point_world = self.shift_point_by_rvec_and_object_class(ground_contact_point_world, rotated_rvec, detection.label, scale_factor)
-
+            if shift_flag==0:
+                rotated_rvec = self.find_and_rotate_rvec_of_bottom_straight_by_degree(ground_contact_points_world, 90, shift_flag=0)
+                ground_contact_point_world = self.calc_midpoint_from_two_points(ground_contact_points_world)
+                shifted_ground_contact_point_world_1 = self.shift_point_by_rvec_and_object_class(ground_contact_point_world, rotated_rvec, detection.label, scale_factor)
+                shifted_candidate_1_image = self.transform_point_from_world_to_image(shifted_ground_contact_point_world_1, inv_H)
+                rotated_rvec = self.find_and_rotate_rvec_of_bottom_straight_by_degree(ground_contact_points_world, -90, shift_flag=0)
+                ground_contact_point_world = self.calc_midpoint_from_two_points(ground_contact_points_world)
+                shifted_ground_contact_point_world_2 = self.shift_point_by_rvec_and_object_class(ground_contact_point_world, rotated_rvec, detection.label, scale_factor)
+                shifted_candidate_2_image = self.transform_point_from_world_to_image(shifted_ground_contact_point_world_2, inv_H)
+                if shifted_candidate_1_image[1] < shifted_candidate_2_image[1]:
+                    shifted_ground_contact_point_world = shifted_ground_contact_point_world_1
+                else:
+                    shifted_ground_contact_point_world = shifted_ground_contact_point_world_2
+            else:
+                rotated_rvec = self.find_and_rotate_rvec_of_bottom_straight_by_degree(ground_contact_points_world, 90, shift_flag)
+                ground_contact_point_world = self.calc_midpoint_from_two_points(ground_contact_points_world)
+                shifted_ground_contact_point_world = self.shift_point_by_rvec_and_object_class(ground_contact_point_world, rotated_rvec, detection.label, scale_factor)
+            print(shifted_ground_contact_point_world)
             position = Position(1, detection.label, detection.score, shifted_ground_contact_point_world, 0)
             positions.append_position(position)
         return positions
@@ -98,8 +109,8 @@ class PositionEstimator:
 
     @staticmethod
     def find_ground_contact_line(min_rect_pts):
-        bottom_points, top_points, is_square = PositionEstimator.find_bottom_top_edge(min_rect_pts)
-        return bottom_points
+        bottom_points, top_points, is_square, shift_flag = PositionEstimator.find_bottom_top_edge(min_rect_pts)
+        return bottom_points, shift_flag
 
     @staticmethod 
     def get_min_rect_points(mask):
@@ -155,7 +166,9 @@ class PositionEstimator:
         return point
 
     @staticmethod
-    def find_and_rotate_rvec_of_bottom_straight_by_degree(ground_contact_points_world, rotation_angle):
+    def find_and_rotate_rvec_of_bottom_straight_by_degree(ground_contact_points_world, rotation_angle, shift_flag):
+        if shift_flag == 1:
+            rotation_angle *= -1
         point1_straight = ground_contact_points_world[0]
         point2_straigth = ground_contact_points_world[1]
         rvec_straight = np.array([[point2_straigth[0] - point1_straight[0]],
@@ -203,13 +216,13 @@ class PositionEstimator:
         In case of an squared bbox, this will be used as base plate
         """
         box = min_rect_pts
-        #box = self.min_rect_points
         bottom_edge = np.zeros((2, 2))
         top_edge = np.zeros((2, 2))
         unique_x, _ = np.unique(box[:, 0], return_counts=True)
         unique_y, _ = np.unique(box[:, 1], return_counts=True)
 
         is_square = False
+        shift_flag = 0  # -1: shift left; 1: shift right; 0: Shift backwards
 
         if len(box) == 4 and len(unique_x) > 2 and len(unique_y) > 2:
             # Sort points by y coordinate
@@ -223,6 +236,42 @@ class PositionEstimator:
             sort_by_y_desc = box[sort_order]
             #  This point is guranted part of the bottom edge of a object
             bottom_vertice_0 = sort_by_y_desc[0]
+            print(bottom_vertice_0)
+            bottom_edge[0] = bottom_vertice_0
+            candidate_length_0 = np.linalg.norm(bottom_vertice_0 - bottom_vertice_candidate_0)
+            candidate_length_1 = np.linalg.norm(bottom_vertice_0 - bottom_vertice_candidate_1)
+            if candidate_length_0 > candidate_length_1:
+                bottom_edge[1] = bottom_vertice_candidate_0
+                top_edge[1] = bottom_vertice_candidate_1
+                if bottom_vertice_candidate_1[1] < bottom_vertice_0[1]:
+                    shift_flag = -1
+                elif bottom_vertice_candidate_1[1] > bottom_vertice_0[1]:
+                    shift_flag = 1
+            else:
+                bottom_edge[1] = bottom_vertice_candidate_1
+                top_edge[1] = bottom_vertice_candidate_0
+                if bottom_vertice_candidate_0[1] < bottom_vertice_0[1]:
+                    shift_flag = -1
+                elif bottom_vertice_candidate_0[1] > bottom_vertice_0[1]:
+                    shift_flag = 1
+            ### Debugging Hardcoded ###
+            #bottom_edge[1] = top_edge[0]
+        else:
+            
+            ### My Case ###
+            is_square = True
+            # Sort points by y coordinate
+            sort_order = box[:, 0].argsort()[::-1]
+            # Select highest y coordinate
+            index_highest_y_coordinate = sort_order[0]
+            bottom_vertice_candidate_0 = box[(index_highest_y_coordinate - 1) % 4]
+            bottom_vertice_candidate_1 = box[(index_highest_y_coordinate + 1) % 4]
+            top_edge[0] = box[(index_highest_y_coordinate + 2) % 4]
+
+            sort_by_y_desc = box[sort_order]
+            #  This point is guranted part of the bottom edge of a object
+            bottom_vertice_0 = sort_by_y_desc[0]
+            print(bottom_vertice_0)
             bottom_edge[0] = bottom_vertice_0
             candidate_length_0 = np.linalg.norm(bottom_vertice_0 - bottom_vertice_candidate_0)
             candidate_length_1 = np.linalg.norm(bottom_vertice_0 - bottom_vertice_candidate_1)
@@ -232,8 +281,8 @@ class PositionEstimator:
             else:
                 bottom_edge[1] = bottom_vertice_candidate_1
                 top_edge[1] = bottom_vertice_candidate_0
-        else:
             # This case will be called if the rotated bbox is a square
+            """
             is_square = True
 
             sorted_box = box[np.lexsort((box[:, 0], box[:, 1]))][::-1]
@@ -242,19 +291,19 @@ class PositionEstimator:
             candidate_length_1 = np.linalg.norm(sorted_box[1] - sorted_box[3])
 
             if candidate_length_0 < candidate_length_1:
-                top_edge[0] = sorted_box[1]
+                top_edge[0] = sorted_box[2]
                 top_edge[1] = sorted_box[3]
-                bottom_edge[0] = sorted_box[2]
+                bottom_edge[0] = sorted_box[1]
                 bottom_edge[1] = sorted_box[0]
             else:
                 top_edge[0] = sorted_box[0]
                 top_edge[1] = sorted_box[1]
                 bottom_edge[0] = sorted_box[3]
                 bottom_edge[1] = sorted_box[2]
-
+            """
             if len(unique_y) == 2:
                 # Sort by y-coordinates
-                sort_order = box[:, 1].argsort()[::-1]
+                sort_order = box[:, 0].argsort()[::-1]
                 # select first
                 index_highest_y_coordinate = sort_order[0]
                 sort_by_y_desc = box[sort_order]
@@ -280,11 +329,24 @@ class PositionEstimator:
                     top_edge[0] = vertice2
                     top_edge[1] = vertice3
                     is_square = False
+        """    
+        if bottom_edge[0][0] >= bottom_edge[1][0] or bottom_edge[0][1] <= bottom_edge[1][1]:
+            bottom_edge = bottom_edge[::-1]
+        """
+        return np.asarray(bottom_edge, dtype=np.float32), np.asarray(top_edge, dtype=np.float32), is_square, shift_flag
+    
+    @staticmethod
+    def transform_point_from_world_to_image(point, inv_Homography_Matrix):
+        print(point)
+        point_new = [point[0], point[1], np.asarray([1], dtype=np.float32)]
+        warped_point = np.matmul(inv_Homography_Matrix, point_new)
+        scaling = 1 / warped_point[2]
 
-        #if bottom_edge[0][0] >= bottom_edge[1][0] or bottom_edge[0][1] <= bottom_edge[1][1]:
-        #    bottom_edge = bottom_edge[::-1]
-        return np.asarray(bottom_edge, dtype=np.float32), np.asarray(top_edge, dtype=np.float32), is_square
-
+        warped_point[1] = warped_point[1] * scaling
+        warped_point[2] = warped_point[2] * scaling
+        warped_point[0] = warped_point[0] * scaling
+        np.asarray(warped_point, dtype=np.float32)
+        return warped_point
 
     @staticmethod
     def cvt_mask_to_hull(mask):

@@ -6,6 +6,7 @@ from src.detector import Detector
 from src.position_estimator import PositionEstimator
 import os
 import json
+import numpy as np
 
 def visualize(log, save_image, save_message, viz):
     def decorator(func):
@@ -35,6 +36,7 @@ class Camera(ABC):
         self.position_estimator = PositionEstimator()
         self.name = name
         self.homography_matrix = self._load_homography_matrix(homography_matrix_filename)
+        self.inv_homography_matrix = self.invert_homography_matrix(self.homography_matrix)
         self.data_generator = self.get_data_generator()
         self.ts = 0
         self.output_dir = output_dir
@@ -60,6 +62,10 @@ class Camera(ABC):
         with open(filename) as file:
             homography_matrix = json.load(file)
         return homography_matrix
+    
+    @staticmethod
+    def invert_homography_matrix(homography_matrx):
+        return np.linalg.inv(homography_matrx)
         
 
     @visualize(log=True, save_image=True, save_message=True, viz=False)
@@ -81,8 +87,8 @@ class Camera(ABC):
         return self._detection_event_data
 
     @visualize(log=True, save_image=True, save_message=True, viz=True) 
-    def _position_estimation_event(self, ts, detections, homography_matrix, scale_factor, gt):
-        bev_positions = self.position_estimator.estimate(detections, homography_matrix, scale_factor)
+    def _position_estimation_event(self, ts, detections, homography_matrix, inv_homography_matrix, scale_factor, gt):
+        bev_positions = self.position_estimator.estimate(detections, homography_matrix, inv_homography_matrix, scale_factor)
         self._position_estimation_event_data.update(
             estimated_positions=bev_positions,
             gt_positions=gt,
@@ -101,9 +107,11 @@ class Camera(ABC):
                 ts = self.ts, 
                 detections = self._detection_event_data.detections, 
                 homography_matrix = self.homography_matrix, 
+                inv_homography_matrix = self.inv_homography_matrix, 
                 scale_factor = 81/5,
                 gt = gt
             )
+            break   #delete break and skip after debugging
             #detections = self._detection_event_data.detections
             #bev_positions = self.position_estimator.estimate(detections, self.homography_matrix, 81/5)
             #print(bev_positions)
