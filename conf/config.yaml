@@ -1,0 +1,23 @@
+cameras:
+  camera1:
+    name: camera1
+    files:  
+      homography_matrix: ${hydra:runtime.cwd}/data/input/camera_1/homography_matrix.json
+    directories:
+      frames: ${hydra:runtime.cwd}/data/input/camera_1/frames
+      masks: ${hydra:runtime.cwd}/data/input/camera_1/masks
+      output: visualizations
+  camera5:
+    name: camera5
+    files:
+      homography_matrix: ${hydra:runtime.cwd}/data/input/camera_5/homography_matrix.json
+    directories:
+      frames: ${hydra:runtime.cwd}/data/input/camera_5/frames
+      masks: ${hydra:runtime.cwd}/data/input/camera_5/masks
+      output: visualizations
+gt:
+  reference_img: ${hydra:runtime.cwd}/data/input/reference_image.png
+  positions: ${hydra:runtime.cwd}/data/input/positions.json
+output_dirs:
+  input: ${hydra:runtime.cwd}/visualizations/input
+  od: ${hydra:runtime.cwd}/visualizations/object_detection

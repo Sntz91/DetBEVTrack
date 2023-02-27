@@ -1,4 +1,9 @@
-data/input/camera_1/*
+data/input/camera_1/**/*.png
+data/input/camera_2/**/*.png
+data/input/camera_3/**/*.png
+data/input/camera_4/**/*.png
+data/input/camera_5/**/*.png
 **/visualizations/**
 tmp/**
 **/yolov5s.pt
+outputs/*
