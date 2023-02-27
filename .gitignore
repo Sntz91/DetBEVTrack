@@ -7,3 +7,4 @@ data/input/camera_5/**/*.png
 tmp/**
 **/yolov5s.pt
 outputs/*
+bevtrackvenv/**
