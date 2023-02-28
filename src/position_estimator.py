@@ -66,26 +66,29 @@ class PositionEstimator:
             min_rect_pts_image = self.move_ground_contact_points_by_bb_coordinates(min_rect_pts, detection.xywh())
             ground_contact_points_image, shift_flag = self.find_ground_contact_line(min_rect_pts_image)
             ground_contact_points_world = self.transform_ground_contact_points_from_image_to_world(ground_contact_points_image, H)
-            if shift_flag==0:
-                rotated_rvec = self.find_and_rotate_rvec_of_bottom_straight_by_degree(ground_contact_points_world, 90, shift_flag=0)
-                ground_contact_point_world = self.calc_midpoint_from_two_points(ground_contact_points_world)
-                shifted_ground_contact_point_world_1 = self.shift_point_by_rvec_and_object_class(ground_contact_point_world, rotated_rvec, detection.label, scale_factor)
-                shifted_candidate_1_image = self.transform_point_from_world_to_image(shifted_ground_contact_point_world_1, inv_H)
-                rotated_rvec = self.find_and_rotate_rvec_of_bottom_straight_by_degree(ground_contact_points_world, -90, shift_flag=0)
-                ground_contact_point_world = self.calc_midpoint_from_two_points(ground_contact_points_world)
-                shifted_ground_contact_point_world_2 = self.shift_point_by_rvec_and_object_class(ground_contact_point_world, rotated_rvec, detection.label, scale_factor)
-                shifted_candidate_2_image = self.transform_point_from_world_to_image(shifted_ground_contact_point_world_2, inv_H)
-                if shifted_candidate_1_image[1] < shifted_candidate_2_image[1]:
-                    shifted_ground_contact_point_world = shifted_ground_contact_point_world_1
-                else:
-                    shifted_ground_contact_point_world = shifted_ground_contact_point_world_2
+            #if shift_flag==0:
+            rotated_rvec = self.find_and_rotate_rvec_of_bottom_straight_by_degree(ground_contact_points_world, 90, shift_flag=0)
+            ground_contact_point_world = self.calc_midpoint_from_two_points(ground_contact_points_world)
+            shifted_ground_contact_point_world_1 = self.shift_point_by_rvec_and_object_class(ground_contact_point_world, rotated_rvec, detection.label, scale_factor)
+            shifted_candidate_1_image = self.transform_point_from_world_to_image(shifted_ground_contact_point_world_1, inv_H)
+            rotated_rvec = self.find_and_rotate_rvec_of_bottom_straight_by_degree(ground_contact_points_world, -90, shift_flag=0)
+            ground_contact_point_world = self.calc_midpoint_from_two_points(ground_contact_points_world)
+            shifted_ground_contact_point_world_2 = self.shift_point_by_rvec_and_object_class(ground_contact_point_world, rotated_rvec, detection.label, scale_factor)
+            shifted_candidate_2_image = self.transform_point_from_world_to_image(shifted_ground_contact_point_world_2, inv_H)
+            if shifted_candidate_1_image[1] < shifted_candidate_2_image[1]:
+                shifted_ground_contact_point_world = shifted_ground_contact_point_world_1
+            else:
+                shifted_ground_contact_point_world = shifted_ground_contact_point_world_2
+            """
             else:
                 rotated_rvec = self.find_and_rotate_rvec_of_bottom_straight_by_degree(ground_contact_points_world, 90, shift_flag)
                 ground_contact_point_world = self.calc_midpoint_from_two_points(ground_contact_points_world)
                 shifted_ground_contact_point_world = self.shift_point_by_rvec_and_object_class(ground_contact_point_world, rotated_rvec, detection.label, scale_factor)
             print(shifted_ground_contact_point_world)
+            """
             position = Position(1, detection.label, detection.score, shifted_ground_contact_point_world, 0)
             positions.append_position(position)
+            
         return positions
 
 
@@ -155,6 +158,7 @@ class PositionEstimator:
         shifted_point_y = point[1] + rvec[1] * length
         shifted_point = [shifted_point_x, shifted_point_y]
         return shifted_point
+    
 
     @staticmethod 
     def calc_midpoint_from_two_points(ground_contact_points_world):
