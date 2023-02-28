@@ -8,3 +8,4 @@ tmp/**
 **/yolov5s.pt
 outputs/*
 bevtrackvenv/**
+**/__pycache__/**

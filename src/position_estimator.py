@@ -15,11 +15,11 @@ class Position:
 
     def get_dict(self):
         output = dict()
-        output['id']: self.id
-        output['label']: self.label
-        output['score']: self.score
-        output['position']: self.position
-        output['color_hist']: self.color_hist
+        output['id'] = self.id
+        output['label'] = self.label
+        output['score'] = self.score
+        output['position'] = self.position
+        output['color_hist'] = self.color_hist
         return output
 
 @dataclass
@@ -86,6 +86,7 @@ class PositionEstimator:
                 shifted_ground_contact_point_world = self.shift_point_by_rvec_and_object_class(ground_contact_point_world, rotated_rvec, detection.label, scale_factor)
             print(shifted_ground_contact_point_world)
             """
+            shifted_ground_contact_point_world = [shifted_ground_contact_point_world[0].item(), shifted_ground_contact_point_world[1].item()]
             position = Position(1, detection.label, detection.score, shifted_ground_contact_point_world, 0)
             positions.append_position(position)
             
