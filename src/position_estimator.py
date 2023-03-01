@@ -1,6 +1,4 @@
 import numpy as np
-import json
-from src.detector import Detector
 import cv2
 from dataclasses import dataclass, field
 
@@ -241,7 +239,6 @@ class PositionEstimator:
             sort_by_y_desc = box[sort_order]
             #  This point is guranted part of the bottom edge of a object
             bottom_vertice_0 = sort_by_y_desc[0]
-            print(bottom_vertice_0)
             bottom_edge[0] = bottom_vertice_0
             candidate_length_0 = np.linalg.norm(bottom_vertice_0 - bottom_vertice_candidate_0)
             candidate_length_1 = np.linalg.norm(bottom_vertice_0 - bottom_vertice_candidate_1)
@@ -276,7 +273,6 @@ class PositionEstimator:
             sort_by_y_desc = box[sort_order]
             #  This point is guranted part of the bottom edge of a object
             bottom_vertice_0 = sort_by_y_desc[0]
-            print(bottom_vertice_0)
             bottom_edge[0] = bottom_vertice_0
             candidate_length_0 = np.linalg.norm(bottom_vertice_0 - bottom_vertice_candidate_0)
             candidate_length_1 = np.linalg.norm(bottom_vertice_0 - bottom_vertice_candidate_1)
@@ -342,7 +338,6 @@ class PositionEstimator:
     
     @staticmethod
     def transform_point_from_world_to_image(point, inv_Homography_Matrix):
-        print(point)
         point_new = [point[0], point[1], np.asarray([1], dtype=np.float32)]
         warped_point = np.matmul(inv_Homography_Matrix, point_new)
         scaling = 1 / warped_point[2]

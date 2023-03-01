@@ -1,9 +1,10 @@
 from abc import ABC, abstractmethod
 from tqdm import tqdm
-from src.events import InputDataEventData, ObjectDetectionEventData, PositionEstimatorEventData
+from src.events import InputDataEventData, ObjectDetectionEventData, PositionEstimatorEventData, TrackerEventData
 from src.generators import CameraDataGenerator
 from src.detector import Detector
 from src.position_estimator import PositionEstimator
+from src.tracker import Tracker
 import os
 import json
 import numpy as np
@@ -34,6 +35,7 @@ class Camera(ABC):
     ) -> None:
         self.detector = Detector()
         self.position_estimator = PositionEstimator()
+        self.tracker = Tracker()
         self.name = name
         self.homography_matrix = self._load_homography_matrix(homography_matrix_filename)
         self.inv_homography_matrix = self.invert_homography_matrix(self.homography_matrix)
@@ -53,6 +55,11 @@ class Camera(ABC):
         self._position_estimation_event_data = PositionEstimatorEventData(
             camera_name = self.name,
             output_dir = f'{self.output_dir}/position_estimation',
+            reference_image_name=reference_image_filename
+        )
+        self._track_event_data = TrackerEventData(
+            camera_name = self.name,
+            output_dir = f'{self.output_dir}/tracks',
             reference_image_name=reference_image_filename
         )
 
@@ -86,7 +93,7 @@ class Camera(ABC):
         )
         return self._detection_event_data
 
-    @visualize(log=True, save_image=True, save_message=True, viz=True) 
+    @visualize(log=True, save_image=True, save_message=True, viz=False) 
     def _position_estimation_event(self, ts, detections, homography_matrix, inv_homography_matrix, scale_factor, gt):
         bev_positions = self.position_estimator.estimate(detections, homography_matrix, inv_homography_matrix, scale_factor)
         self._position_estimation_event_data.update(
@@ -95,6 +102,15 @@ class Camera(ABC):
             ts=ts
         )
         return self._position_estimation_event_data
+
+    @visualize(log=True, save_image=True, save_message=True, viz=True) 
+    def _track_event(self, ts, positions):
+        tracks = self.tracker.track(positions)
+        self._track_event_data.update(
+            tracks=tracks,
+            ts=ts
+        )
+        return self._track_event_data
 
     def run(self, skip=0):
         for frame, mask, gt in tqdm(self.data_generator, total=len(self.data_generator)):
@@ -111,10 +127,10 @@ class Camera(ABC):
                 scale_factor = 81/5,
                 gt = gt
             )
-            break   #delete break and skip after debugging
-            #detections = self._detection_event_data.detections
-            #bev_positions = self.position_estimator.estimate(detections, self.homography_matrix, 81/5)
-            #print(bev_positions)
+            self._track_event(
+                ts = self.ts, 
+                positions = self._position_estimation_event_data.estimated_positions
+            )
 
     @abstractmethod
     def get_data_generator(self):

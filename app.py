@@ -12,12 +12,9 @@ def main(cfg):
         output_dir=cfg.cameras.camera5.directories.output,
         reference_image_filename=cfg.gt.reference_img
     )
-    camera.run(skip=24)
+    camera.run(skip=0)
     print('done')
-
 
 
 if __name__=='__main__':
     main()
-
-    print("Läuft")

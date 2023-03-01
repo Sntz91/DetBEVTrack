@@ -9,3 +9,4 @@ tmp/**
 outputs/*
 bevtrackvenv/**
 **/__pycache__/**
+**/.DS_Store
