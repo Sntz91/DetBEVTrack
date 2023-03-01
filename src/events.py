@@ -203,7 +203,7 @@ class TrackerEventData(EventData):
         pass
 
     def save_image(self):
-        viz = self.get_visualization(self.tracks, self.gt_positions, self.reference_image)
+        viz = self.get_visualization(self.tracks, self.reference_image)
         Visualizer.save_image(self.output_dir, self.camera_name, viz, self.ts)
 
     def save_message(self):
