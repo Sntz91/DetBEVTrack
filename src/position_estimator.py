@@ -56,27 +56,38 @@ class PositionEstimator:
     def estimate(self, detections, H, inv_H, scale_factor):
         positions = Positions()
         for detection in detections:
-            instance_pts = self.iterate_img_and_find_car_pixels(detection.mask)
+            #instance_pts = self.iterate_img_and_find_car_pixels(detection.mask)
+            instance_pts = detection.mask
+
             if instance_pts == []:
                 continue
-            min_rect_pts = self.get_min_rect_points(instance_pts)
-
-            min_rect_pts_image = self.move_ground_contact_points_by_bb_coordinates(min_rect_pts, detection.xywh())
-            ground_contact_points_image, shift_flag = self.find_ground_contact_line(min_rect_pts_image)
-            ground_contact_points_world = self.transform_ground_contact_points_from_image_to_world(ground_contact_points_image, H)
-            #if shift_flag==0:
-            rotated_rvec = self.find_and_rotate_rvec_of_bottom_straight_by_degree(ground_contact_points_world, 90, shift_flag=0)
-            ground_contact_point_world = self.calc_midpoint_from_two_points(ground_contact_points_world)
-            shifted_ground_contact_point_world_1 = self.shift_point_by_rvec_and_object_class(ground_contact_point_world, rotated_rvec, detection.label, scale_factor)
-            shifted_candidate_1_image = self.transform_point_from_world_to_image(shifted_ground_contact_point_world_1, inv_H)
-            rotated_rvec = self.find_and_rotate_rvec_of_bottom_straight_by_degree(ground_contact_points_world, -90, shift_flag=0)
-            ground_contact_point_world = self.calc_midpoint_from_two_points(ground_contact_points_world)
-            shifted_ground_contact_point_world_2 = self.shift_point_by_rvec_and_object_class(ground_contact_point_world, rotated_rvec, detection.label, scale_factor)
-            shifted_candidate_2_image = self.transform_point_from_world_to_image(shifted_ground_contact_point_world_2, inv_H)
-            if shifted_candidate_1_image[1] < shifted_candidate_2_image[1]:
-                shifted_ground_contact_point_world = shifted_ground_contact_point_world_1
+            # Hier min rect brauchen wir nicht
+            if not detection.label == 'person':
+                min_rect_pts = self.get_min_rect_points(instance_pts) #richtig
+                min_rect_pts_image = min_rect_pts
+                #min_rect_pts_image = self.move_ground_contact_points_by_bb_coordinates(min_rect_pts, detection.xywh()) #weird
+                ground_contact_points_image, shift_flag = self.find_ground_contact_line(min_rect_pts_image)
+                ground_contact_points_world = self.transform_ground_contact_points_from_image_to_world(ground_contact_points_image, H)
+                #if shift_flag==0:
+                rotated_rvec = self.find_and_rotate_rvec_of_bottom_straight_by_degree(ground_contact_points_world, 90, shift_flag=0)
+                ground_contact_point_world = self.calc_midpoint_from_two_points(ground_contact_points_world)
+                shifted_ground_contact_point_world_1 = self.shift_point_by_rvec_and_object_class(ground_contact_point_world, rotated_rvec, detection.label, scale_factor)
+                shifted_candidate_1_image = self.transform_point_from_world_to_image(shifted_ground_contact_point_world_1, inv_H)
+                rotated_rvec = self.find_and_rotate_rvec_of_bottom_straight_by_degree(ground_contact_points_world, -90, shift_flag=0)
+                ground_contact_point_world = self.calc_midpoint_from_two_points(ground_contact_points_world)
+                shifted_ground_contact_point_world_2 = self.shift_point_by_rvec_and_object_class(ground_contact_point_world, rotated_rvec, detection.label, scale_factor)
+                shifted_candidate_2_image = self.transform_point_from_world_to_image(shifted_ground_contact_point_world_2, inv_H)
+                if shifted_candidate_1_image[1] < shifted_candidate_2_image[1]:
+                    shifted_ground_contact_point_world = shifted_ground_contact_point_world_1
+                else:
+                    shifted_ground_contact_point_world = shifted_ground_contact_point_world_2
             else:
-                shifted_ground_contact_point_world = shifted_ground_contact_point_world_2
+                x,y,w,h = detection.xyxy  #weird because it is actually xyxw
+                pt = [[y, x+0.5*w]]
+                ground_contact_points_world = self.transform_ground_contact_points_from_image_to_world(pt, H)
+                shifted_ground_contact_point_world = ground_contact_points_world[0]
+                
+                #ground_contact_points_image = ground_contact_points_image[0] + 0.5 * ground_contact_points_image[2]
             """
             else:
                 rotated_rvec = self.find_and_rotate_rvec_of_bottom_straight_by_degree(ground_contact_points_world, 90, shift_flag)
@@ -111,6 +122,7 @@ class PositionEstimator:
 
     @staticmethod
     def find_ground_contact_line(min_rect_pts):
+        #wenn person, dann return min_rect_pts_links unten, rechts unten
         bottom_points, top_points, is_square, shift_flag = PositionEstimator.find_bottom_top_edge(min_rect_pts)
         return bottom_points, shift_flag
 
@@ -138,7 +150,7 @@ class PositionEstimator:
     def shift_point_by_rvec_and_object_class(ground_contact_point_world, rotated_rvec, obj_class, scale_factor):
         point = ground_contact_point_world
         rvec = rotated_rvec
-        if obj_class == "pedestrian":
+        if obj_class == "person":
             length = 0
         elif obj_class == "bicycle":
             length = 0

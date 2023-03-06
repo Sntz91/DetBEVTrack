@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from tqdm import tqdm
 from src.events import InputDataEventData, ObjectDetectionEventData, PositionEstimatorEventData, TrackerEventData
 from src.generators import CameraDataGenerator
-from src.detector import Detector
+from src.detector import Detector, FakeDetector
 from src.position_estimator import PositionEstimator
 from src.tracker import Tracker
 import os
@@ -31,9 +31,11 @@ class Camera(ABC):
         name: str, 
         homography_matrix_filename: str,
         output_dir: str,
-        reference_image_filename: str
+        reference_image_filename: str,
+        fake_detections_dir: str = None
     ) -> None:
-        self.detector = Detector()
+        #self.detector = Detector()
+        self.detector = FakeDetector(fake_detections_dir)
         self.position_estimator = PositionEstimator()
         self.tracker = Tracker()
         self.name = name
@@ -85,7 +87,9 @@ class Camera(ABC):
 
     @visualize(log=True, save_image=True, save_message=True, viz=False)
     def _detection_event(self, ts, frame, mask): 
-        detections = self.detector.detect(frame, mask)
+        #detections = self.detector.detect(frame, mask)
+        detections = self.detector.detect(ts)
+        print('detections', detections)
         self._detection_event_data.update(
             detections=detections,
             frame=frame,
@@ -96,6 +100,7 @@ class Camera(ABC):
     @visualize(log=True, save_image=True, save_message=True, viz=False) 
     def _position_estimation_event(self, ts, detections, homography_matrix, inv_homography_matrix, scale_factor, gt):
         bev_positions = self.position_estimator.estimate(detections, homography_matrix, inv_homography_matrix, scale_factor)
+        print('bev', bev_positions)
         self._position_estimation_event_data.update(
             estimated_positions=bev_positions,
             gt_positions=gt,
@@ -145,12 +150,13 @@ class GeneratedFrameCamera(Camera):
         frame_dir: str,
         mask_dir: str,
         gt_filename: str,
-        reference_image_filename: str
+        reference_image_filename: str,
+        fake_detections_dir: str = None
     ) -> None:
         self.frame_dir = frame_dir
         self.mask_dir = mask_dir
         self.gt_filename = gt_filename
-        super().__init__(name, homography_matrix_filename, output_dir, reference_image_filename)
+        super().__init__(name, homography_matrix_filename, output_dir, reference_image_filename, fake_detections_dir)
 
 
     def get_data_generator(self):

@@ -2,6 +2,7 @@ import numpy as np
 import torch
 from dataclasses import dataclass, field
 import numpy as np
+import json
 
 LABELS = [
     'person', 'bicycle', 'car', 'motorcycle', 'airplane', 'bus', 'train', 'truck', 'boat', 'traffic light',
@@ -64,7 +65,6 @@ class Detections:
     def __iter__(self):
         for detection in self.detection_list:
             yield detection
-
 
     def append_detection(self, detection: Detection):
         self.detection_list.append(detection)
@@ -132,3 +132,43 @@ class Detector:
         self.detections_per_ts.set_masks(masks)
         return self.detections_per_ts
     
+
+class FakeDetector():
+    """ Just returns pre-given detections of a directory. """
+    def __init__(self, detection_messages_dir):
+        self.ts = 0
+        self.detection_dir = detection_messages_dir
+        self.detections_per_ts = Detections()
+
+    def _read_detection_file(self, filename):
+        with open(filename, 'r') as f:
+            detections = json.load(f)
+        return detections
+    
+    def detect(self, ts):
+        filename = f'{self.detection_dir}/{ts}.json'
+        detections_dict = self._read_detection_file(filename)
+        output = Detections()
+        for fake_detection in detections_dict["detections"]:
+            detection = Detection(
+                fake_detection['box'], 
+                fake_detection['label'], 
+                fake_detection['score'], 
+                np.array(fake_detection['convex_hull']), 
+                fake_detection['color_hist']
+            )
+            output.append_detection(detection)
+        self.ts += 1
+        return output
+    
+
+def test_fake_detector():
+    fake_dir = 'data/input/camera_vup/fake_detections'
+    fake_detector = FakeDetector(fake_dir)
+    for ts in range(10):
+        detections = fake_detector.detect(ts)
+        print(detections)
+
+
+if __name__ == '__main__':
+    test_fake_detector()

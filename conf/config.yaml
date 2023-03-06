@@ -15,9 +15,19 @@ cameras:
       frames: ${hydra:runtime.cwd}/data/input/camera_5/frames
       masks: ${hydra:runtime.cwd}/data/input/camera_5/masks
       output: visualizations
+  cameravup:
+    name: cameravup
+    files:
+      homography_matrix: ${hydra:runtime.cwd}/data/input/camera_vup/homography_matrix.json
+    directories:
+      frames: ${hydra:runtime.cwd}/data/input/camera_vup/frames
+      masks: ${hydra:runtime.cwd}/data/input/camera_vup/masks
+      output: visualizations
 gt:
-  reference_img: ${hydra:runtime.cwd}/data/input/reference_image.png
-  positions: ${hydra:runtime.cwd}/data/input/positions.json
+  reference_img: ${hydra:runtime.cwd}/data/input/reference_image_vup.JPG
+  positions: ${hydra:runtime.cwd}/data/input/positions_vup.json
 output_dirs:
   input: ${hydra:runtime.cwd}/visualizations/input
   od: ${hydra:runtime.cwd}/visualizations/object_detection
+fake_detector:
+  fake_detections_dir: ${hydra:runtime.cwd}/data/input/camera_vup/fake_detections

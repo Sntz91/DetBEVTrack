@@ -11,7 +11,10 @@ class CameraDataGenerator():
         assert len(self.frame_generator) \
             == len(self.mask_generator) \
             == len(self.gt_generator), \
-            "Lengths of generators not identical."
+            f"Lengths of generators not identical. \
+                gt: {len(self.gt_generator)}, \
+                masks: {len(self.mask_generator)}, \
+                frames: {len(self.frame_generator)}"
         
     def __iter__(self):
         for frame, mask, gt in zip(self.frame_generator, self.mask_generator, self.gt_generator):

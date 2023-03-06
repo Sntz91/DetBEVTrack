@@ -113,7 +113,7 @@ class ObjectDetectionEventData(EventData):
         new_frame = frame.copy()
         for detection in detections:
             new_frame = Visualizer.draw_box(new_frame, detection.xywh(), detection.score, detection.label)
-            new_frame = Visualizer.draw_mask_inside_box(new_frame, detection.xywh(), detection.mask.tolist())
+            #new_frame = Visualizer.draw_mask_inside_box(new_frame, detection.xywh(), detection.mask.tolist())
         return new_frame
 
 
@@ -138,7 +138,7 @@ class PositionEstimatorEventData(EventData):
 
     def visualize(self) -> None:
         viz = self.get_visualization(self.estimated_positions, self.gt_positions, self.reference_image)
-        cv2.imshow('position_estimation_viz', viz) # TODO this can be outsourced somehow TODO TODO 
+        cv2.imshow('position_estimation_viz', viz) 
         k = cv2.waitKey(1)
         if k == ord('q'): 
             sys.exit(0)

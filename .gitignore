@@ -3,6 +3,8 @@ data/input/camera_2/**/*.png
 data/input/camera_3/**/*.png
 data/input/camera_4/**/*.png
 data/input/camera_5/**/*.png
+data/input/camera_vup/**/*.png
+data/input/camera_vup/fake_detections/*.json
 **/visualizations/**
 tmp/**
 **/yolov5s.pt
