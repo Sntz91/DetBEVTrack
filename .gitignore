@@ -4,6 +4,8 @@ data/input/camera_3/**/*.png
 data/input/camera_4/**/*.png
 data/input/camera_5/**/*.png
 data/input/camera_vup/**/*.png
+data/input/camera_vup_car/**/*.png
+data/input/camera_vup_peds/**/*.png
 data/input/camera_vup/fake_detections/*.json
 **/visualizations/**
 tmp/**
